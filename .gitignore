@@ -1,0 +1,6 @@
+.env
+.vscode/*
+*.pem
+*.log
+*.out
+*_debug_bin*
