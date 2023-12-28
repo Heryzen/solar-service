@@ -1,17 +1,20 @@
 package main
 
 import (
-	"fmt"
 	"log"
+	"net/http"
 	"solar-service/controller"
 	"solar-service/libs/cache"
 	"solar-service/libs/config"
 	"solar-service/libs/database"
-	"solar-service/pkg/plants"
-	"solar-service/pkg/plants/repository"
+	authUc "solar-service/pkg/auth"
+	authRepo "solar-service/pkg/auth/repository"
+	planUc "solar-service/pkg/plants"
+	planRepo "solar-service/pkg/plants/repository"
 )
 
 var (
+	httpCl = http.Client{}
 	dbRepoConn  database.DatabaseRepo = database.NewPostgresRepo()
 )
 
@@ -29,17 +32,21 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println(cache)
+	
 	// Register repositories
-	plantRepo := repository.NewPlantsRepo(db)
+	authRepo := authRepo.NewAuthRepo(db)
+	plantRepo := planRepo.NewPlantsRepo(db)
 
 	// Register usecases
-	plantsUseCase := plants.NewPlantUsecase(plantRepo)
+	authUseCase := authUc.NewAuthUsecase(authRepo, configModel, httpCl, cache)
+	plantsUseCase := planUc.NewPlantUsecase(db, cache, httpCl, configModel, authUseCase, plantRepo)
 
 	// Register handlers
-	plantsHnd := controller.NewPlantsController(plantsUseCase)
+	plantsHnd := controller.NewPlantsController(configModel, plantsUseCase)
+	authHnd := controller.NewAuthController(configModel, authUseCase)
 
-	fmt.Println(plantsHnd)
+	authHnd.Login()
+	go plantsHnd.PlantsScheduler()
 
 	log.Println("Running Solar Service On Port ", configModel.Service.Port)
 }

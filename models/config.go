@@ -2,6 +2,8 @@ package models
 
 // Config struct holding all sub details
 type Config struct {
+	Auth        AuthConfig
+	Cron   		CronConfig
 	Cache 		CacheConfig
 	Service     ServiceConfig
 	Database    DatabaseConfig
@@ -36,4 +38,16 @@ type CacheConfig struct {
 	Driver   string
 	Username string 
 	Password string
+}
+
+type CronConfig struct {
+	PlanTimer  		string 
+	ReportDataTimer string 
+	Location   		string 
+}
+
+type AuthConfig struct {
+	Email    string 
+	Password string
+	BaseUrl  string
 }

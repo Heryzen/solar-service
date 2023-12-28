@@ -51,6 +51,16 @@ func GetConfig() *models.Config {
 			Password: os.Getenv("CACHE_PASSWORD"),
 			Port: 	  cachePort,
 		},
+		Cron: models.CronConfig{
+			PlanTimer: 		 os.Getenv("CRON_PLAN_TIMER"),
+			ReportDataTimer: os.Getenv("CRON_REPORT_DATA_TIMER"),
+			Location: 		 os.Getenv("CRON_LOCATION"),
+		},
+		Auth: models.AuthConfig{
+			Email: os.Getenv("AUTH_EMAIL"),
+			Password: os.Getenv("AUTH_PASSWORD"),
+			BaseUrl: os.Getenv("AUTH_BASE_URL"),
+		},
 	}
 
 	return config
