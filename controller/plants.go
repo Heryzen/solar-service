@@ -34,6 +34,8 @@ func (c *plantsController) PlantsScheduler() {
 	
 	defer scheduler.Stop()
 	scheduler.AddFunc(c.config.Cron.PlanTimer, c.plantsUc.PlantsCron)
+	
+	// add other scheduler here
 
 	go scheduler.Start()
 
