@@ -2,6 +2,7 @@ package plants
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"log"
 	"net/http"
@@ -43,54 +44,68 @@ func NewPlantUsecase(db *sqlx.DB, cache ch.Cache, client http.Client, config *mo
 
 
 func (u *plantUsecase) PlantsCron()  {
+	ctx := context.Background()
+
 	data, err := u.getCache()
 	if err != nil || data == (models.LoginResponse{}) {
 		u.authUc.Login()
 		return
 	}
 
-	tx, err := u.db.Begin()
-	if err != nil {
-		log.Print("[err] [Plants] [PlantsCron] [OpenTransaction] => ", err)
-	}
-	defer tx.Rollback()
-
 	//get
+	result, err := u.getAllPlants(data)
+	if err != nil {
+		log.Println("[err] [Plants] [PlantsCron] [getAllPlants] ", err)
+		return
+	}
 
 	//insert
+	for _, v := range result.Plants {
+		err = u.plantsRepo.Create(ctx, &v)
+		if err != nil {
+			log.Println("[err] [Plants] [PlantsCron] [Create] ", err)
+			return
+		}
+	}
 }
 
-func (u *plantUsecase) getAllPlants() (models.PlantsResponse, error) {
+func (u *plantUsecase) getAllPlants(data models.LoginResponse) (models.PlantsResponse, error) {
 	var plantsResp models.PlantsResponse
 
 	req, err := http.NewRequest("POST", u.config.Auth.BaseUrl+"/login", bytes.NewBuffer([]byte{}))
 	if err != nil {
-		log.Println("[err] [auth] [Login] [http.NewRequest] ", err)
+		log.Println("[err] [Plants] [getAllPlants] [http.NewRequest] ", err)
 		return plantsResp, err
 	}
 
 	req.Header.Set("Content-Type", "application/json")
 	result, err := u.client.Do(req)
 	if err != nil {
-		log.Println("[err] [auth] [Login] [client.Do] ", err)
+		log.Println("[err] [Plants] [getAllPlants] [client.Do] ", err)
 		return plantsResp, err
 	}
 
 	defer result.Body.Close()
 
 	if err = json.NewDecoder(result.Body).Decode(&plantsResp); err != nil {
-		log.Println("[err] [auth] [Login] [NewDecoder] ", err)
+		log.Println("[err] [Plants] [getAllPlants] [NewDecoder] ", err)
 		return plantsResp, err
 	}
 	
-	log.Println("[success] [auth] [Login] ")
 	return plantsResp, nil
 }
 
 func (u *plantUsecase) getCache() (models.LoginResponse, error) {
 	resp := models.LoginResponse{}
-	_, _, err := u.cache.Get("key-cache")
+	data, _, err := u.cache.Get("key-cache")
 	if err != nil {
+		log.Println("[err] [Plants] [getCache] [Get] ", err)
+		return resp, err
+	}
+
+	resp, ok := data.(models.LoginResponse)
+	if !ok {
+		log.Println("[err] [Plants] [getCache] [NullData] ", err)
 		return resp, err
 	}
 
